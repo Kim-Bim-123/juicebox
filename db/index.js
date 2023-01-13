@@ -46,33 +46,74 @@ async function updateUser(id, fields = {}) {
     }
   };
 
+  async function getUserById(userId) {
+    try {
+      const { rows: [ user ] } = await client.query(`
+        SELECT id, username, name, location, active
+        FROM users
+        WHERE id=${ userId }
+      `);
+  
+      if (!user) {
+        return null
+      }
+  
+      user.posts = await getPostsByUser(userId);
+  
+      return user;
+    } catch (error) {
+      throw error;
+    }
+  };
+
 async function createPost({
     authorId,
     title,
     content
   }) {
-    try {
+    try { 
+        const { rows: [ post ] } = await client.query(`
+        INSERT INTO posts("authorId", title, content), 
+        VALUES($1, $2, $3),
+        RETURNING *;
+        `, [authorId, title, content]);
 
     } catch (error) {
         throw error;
     }
   };
 
-async function updatePost(id, {
-    title,
-    content,
-    active
-  }) {
-    try {
+async function updatePost(id, fields ={}) {
+    const setString = Object.keys(fields).map(
+        (key, index) => `"${ key }"=$${ index + 1 }`
+    ).join(', ');
+    
+        if (setString.length === 0) {
+            return;
+        }
 
-    } catch(error) {
-        throw error;
-    }
-  };
+        try {
+            const { rows: [ post ] } = await client.query(`
+            UPDATE posts,
+            SET ${ setString },
+            WHERE id=${ id },
+            RETURNING *;
+            `, Object.values(fields));
+
+            return posts;
+        } catch (error) {
+            throw error;
+        }
+    } 
 
 async function getAllPosts() {
     try {
+        const { rows } = await client.query(`
+        SELECT *,
+        FROM posts;
+        `);
 
+        return rows;
     } catch (error) {
         throw error;
     }
@@ -89,12 +130,29 @@ async function getPostsByUser(userId) {
     } catch (error) {
       throw error;
     }
+  };
+
+
+  async function createTags(tagList) {
+    if (tagList.length === 0) {
+        return;
+    }
+
+    const insertValues = tagList.map(
+        (_, index) => `$${ index + 1 }`).join(', ');
+
   }
 
+  
 
 module.exports = {
     client,
     getAllUsers,
     createUser,
     updateUser,
-}
+    getUserById,
+    createPost,
+    updatePost,
+    getAllPosts,
+    getPostsByUser
+};
