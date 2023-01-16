@@ -7,7 +7,14 @@ const {
     createPost,
     updatePost,
     getAllPosts,
-    getPostsByUser } = require('./index.js');
+    getPostsByUser,
+    createTags,
+    createPostTag,
+    addTagsToPost,
+    getPostById,
+    getPostsByTagName
+
+} = require('./index.js');
 
 
 
@@ -18,7 +25,7 @@ async function dropTables() {
         console.log("Starting to drop tables...");
 
         await client.query(`
-            DROP TABLE IF EXISTS users;
+            DROP TABLE IF EXISTS post_tags;
             DROP TABLE IF EXISTS tags;
             DROP TABLE IF EXISTS posts;
             DROP TABLE IF EXISTS users;
@@ -51,18 +58,18 @@ async function createTables() {
             "authorId" INTEGER REFERENCES users(id) NOT NULL,
             title VARCHAR(255) NOT NULL,
             content TEXT NOT NULL,
-            active BOOLEAN DEFAULT true  
+            active BOOLEAN DEFAULT true
         );
 
         CREATE TABLE tags (
             id SERIAL PRIMARY KEY,
-            name VARCHAR(255) UNIQUE NOT NULL,
+            name VARCHAR(255) UNIQUE NOT NULL
         );
 
         
         CREATE TABLE post_tags (
             "postId" INTEGER REFERENCES posts(id) UNIQUE,
-            "tagId" INTEGER REFERENCES tags(id) UNIQUE, 
+            "tagId" INTEGER REFERENCES tags(id) UNIQUE
         );
       `);
 
@@ -99,26 +106,32 @@ async function createInitialPosts() {
         await createPost({
             authorId: albert.id,
             title: "Yet again at soup",
-            content: "Please stop trying to buy clothes at the soup store"
+            content: "Please stop trying to buy clothes at the soup store",
+            tags: ["#happy", "#youcandoanything"]
         });
 
         await createPost({
             authorId: glamgal.id,
             title: "The glamiest of glams",
-            content: "A glam can only glam what a glam does"
+            content: "A glam can only glam what a glam does",
+            tags: ["#worst-day-ever", "#worst-day-ever"]
         });
 
         await createPost({
             authorId: sandra.id,
             title: "I am Sandy the squirrel",
-            content: "I will karate chop you Spongebob don't try me."
+            content: "I will karate chop you Spongebob don't try me",
+            tags: ["#happy", "#catmandoeverything"]
         });
+
         console.log("Finished creating posts!");
     } catch (error) {
         console.log("Error creating posts!");
         throw error;
     }
 };
+
+
 
 
 async function rebuildDB() {
@@ -129,7 +142,7 @@ async function rebuildDB() {
         await createTables();
         await createInitialUsers();
         await createInitialPosts();
-
+        
     } catch (error) {
         console.error("Error during rebuildDB")
         throw error;
@@ -161,7 +174,16 @@ async function testDB() {
             content: "Updated Content"
         });
         console.log("Result:", updatePostResult);
+        
+        console.log("Calling updatePost on posts[1], only updating tags");
+        const updatePostTagsResult = await updatePost(posts[1].id, {
+          tags: ["#youcandoanything", "#redfish", "#bluefish"]
+        });
+        console.log("Calling getPostsByTagName with #happy");
+        const postsWithHappy = await getPostsByTagName("#happy");
+        console.log("Result:", postsWithHappy);
 
+        console.log("Result:", updatePostTagsResult);
         console.log("Calling getUsersById with 1");
         const albert = await getUserById(1);
         console.log("Result:", albert);
